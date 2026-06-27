@@ -24,7 +24,7 @@ export default function Navbar() {
 
         {/* Center — Hollagram logo */}
         <h1
-          className="text-2xl font-bold bg-gradient-to-r from-primary via-accent1 to-accent2 bg-clip-text text-transparent"
+          className="text-2xl font-bold bg-linear-to-r from-primary via-accent1 to-accent2 bg-clip-text text-transparent"
           style={{ fontFamily: "cursive" }}
         >
           Hollagram

@@ -18,7 +18,7 @@ export default function BottomNav() {
         <FaSearch size={24} />
       </Link>
       <Link href="/profile">
-        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-accent1 flex items-center justify-center text-white text-xs font-bold ring-2 ring-accent2">
+        <div className="w-7 h-7 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white text-xs font-bold ring-2 ring-accent2">
           B
         </div>
       </Link>

@@ -52,7 +52,7 @@ export default function CreatePage() {
           </svg>
         </button>
         {/* Select multiple */}
-        <button className="absolute bottom-3 right-3 bg-black/60 rounded-full px-3 py-1 text-xs text-white border border-gray-500">
+       <button className="absolute bottom-3 right-3 bg-black/60 rounded-full px-3 py-1 text-xs text-white border border-gray-500" title="Select multiple">
           Select
         </button>
       </div>
@@ -68,7 +68,7 @@ export default function CreatePage() {
       </div>
 
       {/* Image grid */}
-      <div className="grid grid-cols-4 gap-[1px] flex-1">
+      <div className="grid grid-cols-4  gap-px flex-1">
         {recentImages.map((src, i) => (
           <div
             key={i}

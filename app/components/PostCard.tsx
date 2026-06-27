@@ -44,10 +44,10 @@ export default function PostCard({ post }: { post: Post }) {
 
       {/* Actions */}
       <div className="p-3 flex items-center gap-4">
-        <button onClick={handleLike} className="text-accent1">
+        <button type="button" onClick={handleLike} aria-label={liked ? "Unlike" : "Like"} className="text-accent1">
           {liked ? <FaHeart size={22} /> : <FaRegHeart size={22} />}
         </button>
-        <button className="text-gray-500 dark:text-gray-400">
+        <button type="button" aria-label="Comment" className="text-gray-500 dark:text-gray-400">
           <FaRegComment size={22} />
         </button>
       </div>

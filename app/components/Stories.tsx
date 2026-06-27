@@ -15,10 +15,10 @@ export default function Stories() {
       {stories.map((story) => (
         <div key={story.id} className="flex flex-col items-center gap-1 min-w-fit">
           <div
-            className={`w-16 h-16 rounded-full p-[2px] ${
+            className={`w-16 h-16 rounded-full p-0.5 ${
               story.isOwn
                 ? "bg-gray-300 dark:bg-gray-700"
-                : "bg-gradient-to-bl from-[#7C3AED] via-[#F97316 ] to-[#06B6D4] animate-gradient-x"
+                : "bg-linear-to-bl from-[#7C3AED] via-[#F97316 ] to-[#06B6D4] animate-gradient-x"
             }`}
           >
             <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xl font-bold text-primary relative">

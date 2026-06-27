@@ -21,7 +21,7 @@ export default function CaptionPage() {
 
       {/* Caption input */}
       <div className="flex items-start gap-3 px-4 py-4 border-b border-gray-800">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
+        <div className="w-9 h-9 rounded-fullbg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
           B
         </div>
         <textarea

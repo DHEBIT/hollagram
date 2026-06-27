@@ -55,7 +55,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-6 mt-4 mb-3">
           {/* Avatar with + */}
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary via-accent1 to-accent2 p-[2px]">
+            <div className="w-20 h-20 rounded-fullbg-linear-to-tr from-primary via-accent1 to-accent2 p-0.5">
               <div className="w-full h-full rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold text-primary overflow-hidden">
                 B
               </div>
@@ -89,13 +89,13 @@ export default function ProfilePage() {
 
         {/* Action buttons */}
         <div className="flex gap-2 mb-4">
-          <button className="flex-1 py-[6px] bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">
+          <button className="flex-1 py-1.5bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">
             Edit profile
           </button>
-          <button className="flex-1 py-[6px] bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">
+          <button className="flex-1 py-1.5bg-gray-200 dark:bg-gray-800 rounded-lg text-sm font-semibold dark:text-white">
             Share profile
           </button>
-          <button className="py-[6px] px-3 bg-gray-200 dark:bg-gray-800 rounded-lg dark:text-white text-sm font-bold">
+          <button className="py-1.5px-3 bg-gray-200 dark:bg-gray-800 rounded-lg dark:text-white text-sm font-bold">
             +
           </button>
         </div>
@@ -110,14 +110,14 @@ export default function ProfilePage() {
             {discoverPeople
               .filter((p) => !dismissed.includes(p.id))
               .map((person) => (
-                <div key={person.id} className="min-w-[140px] bg-gray-100 dark:bg-gray-900 rounded-xl p-3 relative">
+                <div key={person.id} className="min-w-35 bg-gray-100 dark:bg-gray-900 rounded-xl p-3 relative">
                   <button
                     onClick={() => setDismissed([...dismissed, person.id])}
                     className="absolute top-2 right-2 text-gray-400 text-xs"
                   >
                     ✕
                   </button>
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold mx-auto mb-2">
+                  <div className="w-12 h-12 rounded-fullbg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold mx-auto mb-2">
                     {person.avatar}
                   </div>
                   <p className="text-xs font-semibold dark:text-white text-center truncate">{person.username}</p>
@@ -140,7 +140,7 @@ export default function ProfilePage() {
           </div>
           {["Highlights"].map((h) => (
             <div key={h} className="flex flex-col items-center gap-1 min-w-fit">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-accent2 p-[2px]">
+              <div className="w-16 h-16 rounded-fullbg-linear-to-tr from-primary to-accent2 p-0.5">
                 <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800" />
               </div>
               <span className="text-xs text-gray-500 dark:text-gray-400">{h}</span>
@@ -167,7 +167,7 @@ export default function ProfilePage() {
 
         {/* Posts grid */}
         {activeTab === "posts" && (
-          <div className="grid grid-cols-3 gap-[2px]">
+          <div className="grid grid-cols-3 gap-0.5">
             {postImages.map((src, i) => (
               <div key={i} className="aspect-square relative">
                 <Image src={src} alt="" fill className="object-cover" />
