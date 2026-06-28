@@ -11,7 +11,7 @@ const stories = [
 
 export default function Stories() {
   return (
-    <div className="flex gap-4 overflow-x-auto px-4 py-3 scrollbar-hide">
+    <div className="flex gap-4 overflow-x-auto px-4 py-3 scrollbar-hide justify-center">
       {stories.map((story) => (
         <div key={story.id} className="flex flex-col items-center gap-1 min-w-fit">
           <div
