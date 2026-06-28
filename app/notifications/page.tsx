@@ -45,7 +45,7 @@ export default function NotificationsPage() {
 
       {/* Top bar */}
       <div className="flex items-center gap-4 px-4 pt-12 pb-3 border-b border-gray-100 dark:border-gray-900">
-        <button onClick={() => router.back()} className="text-gray-800 dark:text-white">
+        <button type="button" onClick={() => router.back()} className="text-gray-800 dark:text-white" aria-label="Go back" title="Go back">
           <FaArrowLeft size={20} />
         </button>
         <h2 className="text-lg font-bold dark:text-white">Notifications</h2>
