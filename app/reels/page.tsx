@@ -40,20 +40,23 @@ export default function ReelsPage() {
   }
 
   const toggleMute = (id: string) => {
-    const video = videoRefs.current[id]
-    if (video) {
-      video.muted = !video.muted
-      setMutedReels(prev => {
-        const newSet = new Set(prev)
-        if (newSet.has(id)) {
-          newSet.delete(id)
-        } else {
-          newSet.add(id)
-        }
-        return newSet
-      })
+  const video = videoRefs.current[id];
+  if (video) {
+    video.muted = !video.muted;
+    if (!video.muted) {
+      video.play();
     }
+    setMutedReels(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   }
+};
 
   return (
     <main className="bg-black min-h-screen">
@@ -74,9 +77,9 @@ export default function ReelsPage() {
             <video
               ref={el => { videoRefs.current[reel.id] = el }}
               src={reel.video_url}
-              className="h-full w-full object-cover"
-              loop
-              autoPlay
+               className="h-full w-full object-cover"
+               loop
+               autoPlay
               muted
               playsInline
             />
