@@ -1,4 +1,4 @@
- import { createServerClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -28,7 +28,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/signup");
 
   if (!user && !isAuthPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectUrl = new URL("/login", request.url);
+    return NextResponse.redirect(redirectUrl);
   }
 
   if (user && isAuthPage) {
@@ -39,5 +40,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon|.*\\.png$|.*\\.ico$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon|.\\.png$|.\\.ico$|.\\.svg$).)"],
 };

@@ -7,6 +7,9 @@ import { MdVideoLibrary, MdOutlineAutorenew } from "react-icons/md";
 import { FaThreads } from "react-icons/fa6";
 import Image from "next/image";
 import BottomNav from "../components/BottomNav";
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
+import Link from "next/link";
 
 const profileTabs = [
   { icon: <FaThLarge size={20} />, key: "posts" },
@@ -32,6 +35,12 @@ const postImages = [
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("posts");
+  const router = useRouter();
+
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  router.push("/login");
+};
   const [dismissed, setDismissed] = useState<number[]>([]);
 
   return (
@@ -45,7 +54,9 @@ export default function ProfilePage() {
         </div>
         <div className="flex items-center gap-4">
           <FaThreads size={22} className="dark:text-white" />
-          <FaBars size={22} className="dark:text-white" />
+          <Link href="/settings">
+            <FaBars size={22} className="dark:text-white" />
+          </Link>
         </div>
       </div>
 
