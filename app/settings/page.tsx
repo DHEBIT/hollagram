@@ -5,6 +5,17 @@ import { supabase } from "../lib/supabase";
 import { FaArrowLeft, FaSearch, FaUser, FaBell, FaLock, FaShieldAlt, FaInfoCircle, FaBookmark, FaArchive, FaClock } from "react-icons/fa";
 import { MdOutlineManageAccounts } from "react-icons/md";
 
+type SettingItem = {
+  icon: React.ReactNode;
+  label: string;
+  sub?: string;
+  value?: string;
+};
+
+type SettingSection = {
+  title: string;
+  items: SettingItem[];
+};
 export default function SettingsPage() {
   const router = useRouter();
 
@@ -13,7 +24,7 @@ export default function SettingsPage() {
     router.push("/login");
   };
 
-  const sections = [
+  const sections: SettingSection[] = [
     {
       title: "Your account",
       items: [
