@@ -5,12 +5,13 @@ import { useState } from "react";
 import Image from "next/image";
 
 type Post = {
-  id: number;
+  id: string;
   username: string;
-  avatar: string;
-  image: string;
   caption: string;
+  media_url: string;
+  media_type: string;
   likes: number;
+  comments: number;
 };
 
 export default function PostCard({ post }: { post: Post }) {
@@ -32,22 +33,33 @@ export default function PostCard({ post }: { post: Post }) {
         <span className="font-semibold text-sm dark:text-white">{post.username}</span>
       </div>
 
-      {/* Post image */}
+      {/* Post media */}
       <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800">
-        <Image
-          src={post.image}
-          alt={post.caption}
-          fill
-          className="object-cover"
-        />
+        {post.media_type === "video" ? (
+          <video
+            src={post.media_url}
+            className="w-full h-full object-cover"
+            controls
+            playsInline
+          />
+        ) : (
+          <Image
+            src={post.media_url}
+            alt={post.caption}
+            fill
+            loading="eager"
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="object-cover"
+          />
+        )}
       </div>
 
       {/* Actions */}
       <div className="p-3 flex items-center gap-4">
-        <button type="button" onClick={handleLike} aria-label={liked ? "Unlike" : "Like"} className="text-accent1">
+        <button onClick={handleLike} className="text-accent1" title="Like post">
           {liked ? <FaHeart size={22} /> : <FaRegHeart size={22} />}
         </button>
-        <button type="button" aria-label="Comment" className="text-gray-500 dark:text-gray-400">
+        <button className="text-gray-500 dark:text-gray-400">
           <FaRegComment size={22} />
         </button>
       </div>
