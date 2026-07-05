@@ -1,26 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { FaArrowLeft, FaUsers } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { FaArrowLeft, FaUserCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
 
-const suggested = [
-  { id: 1, username: "Hollagram AI", handle: "AI", isAI: true },
-  { id: 2, username: "purple_fan", handle: "purple_fan22" },
-  { id: 3, username: "ghana_pics", handle: "ghanapics_gh" },
-  { id: 4, username: "accra_life", handle: "accralife01" },
-  { id: 5, username: "bernard_v", handle: "bernardv_ke" },
-  { id: 6, username: "morbexdesigns", handle: "morbex_designs" },
-];
+type Profile = {
+  id: string;
+  username: string;
+};
 
 export default function NewMessagePage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [removed, setRemoved] = useState<number[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [startingChatWith, setStartingChatWith] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id ?? null;
+      setCurrentUserId(userId);
+
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .order("username", { ascending: true });
+
+      setProfiles((profilesData || []).filter((p) => p.id !== userId));
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const filtered = profiles.filter((p) =>
+    p.username.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSelectUser = async (otherUserId: string) => {
+    if (!currentUserId || startingChatWith) return;
+    setStartingChatWith(otherUserId);
+
+    try {
+      // Check if a conversation between these two already exists
+      const { data: existing } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(
+          `and(user_a.eq.${currentUserId},user_b.eq.${otherUserId}),and(user_a.eq.${otherUserId},user_b.eq.${currentUserId})`
+        )
+        .maybeSingle();
+
+      if (existing) {
+        router.push(`/messages/${existing.id}`);
+        return;
+      }
+
+      const { data: created, error } = await supabase
+        .from("conversations")
+        .insert({ user_a: currentUserId, user_b: otherUserId })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      if (created) router.push(`/messages/${created.id}`);
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+      alert("Couldn't start that conversation. Please try again.");
+      setStartingChatWith(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-white dark:bg-black">
-
       {/* Top bar */}
       <div className="flex items-center gap-4 px-4 pt-12 pb-4">
         <button onClick={() => router.back()} className="dark:text-white">
@@ -30,7 +84,6 @@ export default function NewMessagePage() {
       </div>
 
       <div className="max-w-lg mx-auto px-4">
-
         {/* To: search */}
         <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3 mb-2">
           <span className="text-sm text-gray-500">To:</span>
@@ -43,59 +96,33 @@ export default function NewMessagePage() {
           />
         </div>
 
-        {/* Group chat option */}
-        <div className="flex items-center gap-3 py-3 cursor-pointer">
-          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-            <FaUsers className="text-gray-600 dark:text-gray-300" size={20} />
-          </div>
-          <p className="text-base font-semibold dark:text-white">Group chat</p>
-        </div>
-
-        {/* AI chats option */}
-        <div className="flex items-center gap-3 py-3 cursor-pointer">
-          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-            <span className="text-gray-600 dark:text-gray-300 text-xl">✦</span>
-          </div>
-          <p className="text-base font-semibold dark:text-white">AI chats</p>
-        </div>
-
-        {/* Suggested */}
-        <p className="text-base font-bold mt-5 mb-2 dark:text-white">Suggested</p>
+        {/* People */}
+        <p className="text-base font-bold mt-5 mb-2 dark:text-white">
+          {search ? "Results" : "All users"}
+        </p>
         <div>
-          {suggested
-            .filter((p) => !removed.includes(p.id))
-            .filter((p) => p.username.toLowerCase().includes(search.toLowerCase()))
-            .map((person) => (
-              <div key={person.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                      person.isAI
-                        ? "bg-linear-to-tr from-purple-500 via-pink-500 to-purple-700"
-                        : "bg-linear-to-tr from-primary to-accent1"
-                    }`}
-                  >
-                    {person.isAI ? "✦" : person.username[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold dark:text-white flex items-center gap-1">
-                      {person.username}
-                      {person.isAI && <span className="text-accent2">✓</span>}
-                    </p>
-                    <p className="text-xs text-gray-400">{person.handle}</p>
-                  </div>
+          {loading ? (
+            <p className="text-sm text-gray-400 py-4">Loading users...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 py-4">No users found.</p>
+          ) : (
+            filtered.map((person) => (
+              <button
+                key={person.id}
+                onClick={() => handleSelectUser(person.id)}
+                disabled={!!startingChatWith}
+                className="flex items-center gap-3 py-3 w-full text-left disabled:opacity-50"
+              >
+                <div className="w-12 h-12 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  {person.username[0]?.toUpperCase() || <FaUserCircle size={20} />}
                 </div>
-                <button
-                  onClick={() => setRemoved([...removed, person.id])}
-                  className="text-gray-400 text-lg"
-                  title="Remove"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+                <p className="text-sm font-semibold dark:text-white">
+                  {startingChatWith === person.id ? "Starting chat..." : person.username}
+                </p>
+              </button>
+            ))
+          )}
         </div>
-
       </div>
     </main>
   );
