@@ -71,8 +71,8 @@ export default function NewMessagePage() {
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm ${
                       person.isAI
-                        ? "bg-gradient-to-tr from-purple-500 via-pink-500 to-purple-700"
-                        : "bg-gradient-to-tr from-primary to-accent1"
+                        ? "bg-linear-to-tr from-purple-500 via-pink-500 to-purple-700"
+                        : "bg-linear-to-tr from-primary to-accent1"
                     }`}
                   >
                     {person.isAI ? "✦" : person.username[0].toUpperCase()}

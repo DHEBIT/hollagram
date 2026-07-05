@@ -20,18 +20,41 @@ type Post = {
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUsername, setCurrentUsername] = useState("user");
+  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      // Get the logged-in user first, so we know whose likes to check
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      const userId = user?.id ?? null;
+      const username = user?.user_metadata?.username || user?.email?.split("@")[0] || "user";
+      setCurrentUserId(userId);
+      setCurrentUsername(username);
+
+      const { data: postsData, error: postsError } = await supabase
         .from("posts")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (!error && data) setPosts(data);
+      if (!postsError && postsData) setPosts(postsData);
+
+      if (userId) {
+        const { data: likesData } = await supabase
+          .from("post_likes")
+          .select("post_id")
+          .eq("user_id", userId);
+
+        if (likesData) {
+          setLikedPostIds(new Set(likesData.map((l) => l.post_id)));
+        }
+      }
+
       setLoading(false);
     };
-    fetchPosts();
+    fetchData();
   }, []);
 
   return (
@@ -45,7 +68,13 @@ export default function Home() {
           <p className="text-center text-gray-400 mt-10">No posts yet. Be the first to post! 📸</p>
         ) : (
           posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUserId={currentUserId}
+              currentUsername={currentUsername}
+              initiallyLiked={likedPostIds.has(post.id)}
+            />
           ))
         )}
       </div>

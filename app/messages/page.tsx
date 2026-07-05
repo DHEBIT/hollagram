@@ -57,7 +57,7 @@ export default function MessagesPage() {
             <div className="bg-gray-200 dark:bg-gray-800 text-[10px] px-2 py-1 rounded-2xl rounded-bl-none mb-1 max-w-[80px] text-center dark:text-white">
               Unpopular opinion...
             </div>
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-16 h-16 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-xl">
               B
             </div>
             <span className="text-xs text-gray-600 dark:text-gray-400">Your note</span>
@@ -97,7 +97,7 @@ export default function MessagesPage() {
               <div key={convo.id} className="flex items-center justify-between py-3">
                 <Link href={`/messages/${convo.id}`} className="flex items-center gap-3 flex-1">
                   {convo.avatar ? (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-accent2 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-linear-to-tr from-primary to-accent2 flex items-center justify-center text-white font-bold text-sm shrink-0">
                       {convo.avatar}
                     </div>
                   ) : (

@@ -62,7 +62,7 @@ export default function NotificationsPage() {
                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer"
               >
                 {/* Avatar */}
-                <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary via-accent1 to-accent2 p-[2px] shrink-0">
+                <div className="w-11 h-11 rounded-full bg-linear-to-tr from-primary via-accent1 to-accent2 p-[2px] shrink-0">
                   <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-primary">
                     {item.username[0].toUpperCase()}
                   </div>
