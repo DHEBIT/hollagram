@@ -9,6 +9,7 @@ import { supabase } from "./lib/supabase";
 
 type Post = {
   id: string;
+  user_id: string;
   username: string;
   caption: string;
   media_url: string;
@@ -23,6 +24,7 @@ export default function Home() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState("user");
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +52,15 @@ export default function Home() {
         if (likesData) {
           setLikedPostIds(new Set(likesData.map((l) => l.post_id)));
         }
+
+        const { data: followsData } = await supabase
+          .from("follows")
+          .select("following_id")
+          .eq("follower_id", userId);
+
+        if (followsData) {
+          setFollowingIds(new Set(followsData.map((f) => f.following_id)));
+        }
       }
 
       setLoading(false);
@@ -74,6 +85,7 @@ export default function Home() {
               currentUserId={currentUserId}
               currentUsername={currentUsername}
               initiallyLiked={likedPostIds.has(post.id)}
+              initiallyFollowingAuthor={followingIds.has(post.user_id)}
             />
           ))
         )}

@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 
 type Post = {
   id: string;
+  user_id: string;
   username: string;
   caption: string;
   media_url: string;
@@ -27,6 +28,7 @@ type PostCardProps = {
   currentUserId: string | null;
   currentUsername: string;
   initiallyLiked: boolean;
+  initiallyFollowingAuthor: boolean;
 };
 
 export default function PostCard({
@@ -34,10 +36,15 @@ export default function PostCard({
   currentUserId,
   currentUsername,
   initiallyLiked,
+  initiallyFollowingAuthor,
 }: PostCardProps) {
   const [liked, setLiked] = useState(initiallyLiked);
   const [likes, setLikes] = useState(post.likes);
   const [likeBusy, setLikeBusy] = useState(false);
+
+  const [followingAuthor, setFollowingAuthor] = useState(initiallyFollowingAuthor);
+  const [followBusy, setFollowBusy] = useState(false);
+  const isOwnPost = currentUserId === post.user_id;
 
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -76,6 +83,35 @@ export default function PostCard({
       console.error("Failed to update like:", err);
     } finally {
       setLikeBusy(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUserId || isOwnPost || followBusy) return;
+
+    const wasFollowing = followingAuthor;
+    setFollowingAuthor(!wasFollowing);
+    setFollowBusy(true);
+
+    try {
+      if (wasFollowing) {
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", currentUserId)
+          .eq("following_id", post.user_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("follows")
+          .insert({ follower_id: currentUserId, following_id: post.user_id });
+        if (error) throw error;
+      }
+    } catch (err) {
+      setFollowingAuthor(wasFollowing);
+      console.error("Failed to update follow:", err);
+    } finally {
+      setFollowBusy(false);
     }
   };
 
@@ -138,7 +174,20 @@ export default function PostCard({
         <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
           {post.username[0].toUpperCase()}
         </div>
-        <span className="font-semibold text-sm dark:text-white">{post.username}</span>
+        <span className="font-semibold text-sm dark:text-white flex-1">{post.username}</span>
+        {!isOwnPost && currentUserId && (
+          <button
+            onClick={handleFollowToggle}
+            disabled={followBusy}
+            className={`text-xs font-semibold px-3 py-1 rounded-lg ${
+              followingAuthor
+                ? "bg-gray-200 dark:bg-gray-800 dark:text-white"
+                : "bg-primary text-white"
+            }`}
+          >
+            {followingAuthor ? "Following" : "Follow"}
+          </button>
+        )}
       </div>
 
       {/* Post media */}

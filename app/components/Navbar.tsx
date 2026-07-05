@@ -1,11 +1,45 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "../providers";
 import { FaPlus, FaHeart } from "react-icons/fa";
 import Link from "next/link";
+import { supabase } from "../lib/supabase";
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const loadUnread = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return;
+
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", userId)
+        .eq("read", false);
+
+      setUnreadCount(count || 0);
+    };
+    loadUnread();
+
+    // Keep the badge live as new notifications arrive
+    const channel = supabase
+      .channel("navbar-notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        () => loadUnread()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <>
@@ -55,9 +89,11 @@ export default function Navbar() {
           {/* Notifications — links to page */}
           <Link href="/notifications" className="relative text-gray-800 dark:text-white">
             <FaHeart size={22} />
-            <span className="absolute -top-1 -right-1 bg-accent1 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-accent1 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
 
         </div>
