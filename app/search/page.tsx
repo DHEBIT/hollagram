@@ -1,27 +1,122 @@
 "use client";
 
 import Navbar from "../components/Navbar";
-import { FaSearch, FaSlidersH } from "react-icons/fa";
-import { useState } from "react";
+import { FaSearch } from "react-icons/fa";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import BottomNav from "../components/BottomNav";
+import { supabase } from "../lib/supabase";
 
-const categories = ["For you", "+", "Fashion", "Ghana News", "Food", "Travel", "Sports", "Music", "Art"];
+type UserResult = {
+  id: string;
+  username: string;
+};
 
-const exploreImages = [
-  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300",
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300",
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300",
-  "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=300",
-  "https://images.unsplash.com/photo-1518791841217-8f162f1912da?w=300",
-  "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=300",
-  "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=300",
-  "https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=300",
-  "https://images.unsplash.com/photo-1465101162946-4377e57745c3?w=300",
-];
+type PostResult = {
+  id: string;
+  media_url: string;
+  caption: string;
+};
 
 export default function SearchPage() {
-  const [active, setActive] = useState("For you");
+  const [query, setQuery] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+
+  const [explorePosts, setExplorePosts] = useState<PostResult[]>([]);
+  const [userResults, setUserResults] = useState<UserResult[]>([]);
+  const [postResults, setPostResults] = useState<PostResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [loadingExplore, setLoadingExplore] = useState(true);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id ?? null;
+      setCurrentUserId(userId);
+
+      if (userId) {
+        const { data: followsData } = await supabase
+          .from("follows")
+          .select("following_id")
+          .eq("follower_id", userId);
+        if (followsData) {
+          setFollowedIds(new Set(followsData.map((f) => f.following_id)));
+        }
+      }
+
+      const { data: postsData } = await supabase
+        .from("posts")
+        .select("id, media_url, caption")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      // Light shuffle so the explore grid doesn't feel like a plain feed
+      const shuffled = [...(postsData || [])].sort(() => Math.random() - 0.5);
+      setExplorePosts(shuffled);
+      setLoadingExplore(false);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setUserResults([]);
+      setPostResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      const [usersRes, postsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, username")
+          .ilike("username", `%${trimmed}%`)
+          .neq("id", currentUserId ?? "")
+          .limit(10),
+        supabase
+          .from("posts")
+          .select("id, media_url, caption")
+          .ilike("caption", `%${trimmed}%`)
+          .limit(21),
+      ]);
+
+      setUserResults(usersRes.data || []);
+      setPostResults(postsRes.data || []);
+      setSearching(false);
+    }, 350);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, currentUserId]);
+
+  const handleFollow = async (otherUserId: string) => {
+    if (!currentUserId) return;
+    setFollowedIds((prev) => new Set(prev).add(otherUserId));
+
+    const { error } = await supabase
+      .from("follows")
+      .insert({ follower_id: currentUserId, following_id: otherUserId });
+
+    if (error) {
+      console.error("Failed to follow:", error);
+      setFollowedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(otherUserId);
+        return next;
+      });
+    }
+  };
+
+  const isActivelySearching = query.trim().length > 0;
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-black pt-16 pb-20">
@@ -34,49 +129,97 @@ export default function SearchPage() {
             <FaSearch className="text-gray-500" size={16} />
             <input
               type="text"
-              placeholder="Search Hollagram..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search users or captions..."
               className="bg-transparent outline-none text-sm w-full dark:text-white placeholder-gray-500"
             />
           </div>
-          <button
-            className="text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-900 p-3 rounded-xl"
-            title="Filter search results"
-            aria-label="Filter search results"
-          >
-            <FaSlidersH size={18} />
-          </button>
         </div>
 
-        {/* Category filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActive(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap border transition-all ${
-                active === cat
-                  ? "bg-primary text-white border-primary"
-                  : "bg-transparent text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {isActivelySearching ? (
+          <>
+            {searching ? (
+              <p className="text-center text-gray-400 text-sm mt-6">Searching...</p>
+            ) : (
+              <>
+                {/* Users */}
+                {userResults.length > 0 && (
+                  <div className="mb-5">
+                    <p className="font-semibold text-sm dark:text-white mb-2">Users</p>
+                    <div className="flex flex-col gap-1">
+                      {userResults.map((user) => (
+                        <div key={user.id} className="flex items-center gap-3 py-2">
+                          <div className="w-11 h-11 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                            {user.username[0].toUpperCase()}
+                          </div>
+                          <p className="flex-1 text-sm font-semibold dark:text-white">
+                            {user.username}
+                          </p>
+                          <button
+                            onClick={() => handleFollow(user.id)}
+                            disabled={followedIds.has(user.id)}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60 ${
+                              followedIds.has(user.id)
+                                ? "bg-gray-200 dark:bg-gray-800 dark:text-white"
+                                : "bg-primary text-white"
+                            }`}
+                          >
+                            {followedIds.has(user.id) ? "Following" : "Follow"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-        {/* Explore grid */}
-        <div className="grid grid-cols-3 gap-1">
-          {exploreImages.map((src, i) => (
-            <div
-              key={i}
-              className={`relative bg-gray-200 dark:bg-gray-800 overflow-hidden ${
-                i === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square"
-              }`}
-            >
-              <Image src={src} alt="" fill className="object-cover" />
-            </div>
-          ))}
-        </div>
+                {/* Matching posts */}
+                {postResults.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-sm dark:text-white mb-2">Posts</p>
+                    <div className="grid grid-cols-3 gap-1">
+                      {postResults.map((post) => (
+                        <div key={post.id} className="aspect-square relative bg-gray-200 dark:bg-gray-800">
+                          <Image src={post.media_url} alt={post.caption} fill className="object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {userResults.length === 0 && postResults.length === 0 && (
+                  <p className="text-center text-gray-400 text-sm mt-6">
+                    No users or posts found for &ldquo;{query}&rdquo;
+                  </p>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="font-semibold text-sm dark:text-white mb-2">Explore</p>
+            {loadingExplore ? (
+              <p className="text-center text-gray-400 text-sm mt-6">Loading...</p>
+            ) : explorePosts.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm mt-6">
+                No posts yet. Once people start posting, they&apos;ll show up here.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-1">
+                {explorePosts.map((post, i) => (
+                  <div
+                    key={post.id}
+                    className={`relative bg-gray-200 dark:bg-gray-800 overflow-hidden ${
+                      i === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square"
+                    }`}
+                  >
+                    <Image src={post.media_url} alt={post.caption} fill className="object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
       </div>
           <BottomNav />
