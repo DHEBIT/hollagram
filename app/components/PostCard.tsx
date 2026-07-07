@@ -1,6 +1,6 @@
 "use client";
 
-import { FaHeart, FaRegHeart, FaRegComment, FaPaperPlane } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaRegComment, FaPaperPlane, FaEllipsisH } from "react-icons/fa";
 import { useState } from "react";
 import Image from "next/image";
 import { supabase } from "../lib/supabase";
@@ -29,6 +29,7 @@ type PostCardProps = {
   currentUsername: string;
   initiallyLiked: boolean;
   initiallyFollowingAuthor: boolean;
+  onDeleted?: (postId: string) => void;
 };
 
 export default function PostCard({
@@ -37,6 +38,7 @@ export default function PostCard({
   currentUsername,
   initiallyLiked,
   initiallyFollowingAuthor,
+  onDeleted,
 }: PostCardProps) {
   const [liked, setLiked] = useState(initiallyLiked);
   const [likes, setLikes] = useState(post.likes);
@@ -45,6 +47,10 @@ export default function PostCard({
   const [followingAuthor, setFollowingAuthor] = useState(initiallyFollowingAuthor);
   const [followBusy, setFollowBusy] = useState(false);
   const isOwnPost = currentUserId === post.user_id;
+
+  const [showMenu, setShowMenu] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -115,6 +121,43 @@ export default function PostCard({
     }
   };
 
+  const handleDelete = async () => {
+    if (!currentUserId || !isOwnPost || deleting) return;
+    const confirmed = window.confirm(
+      "Delete this post? This can't be undone — likes, comments, and notifications tied to it will be removed too."
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setShowMenu(false);
+
+    try {
+      // Remove the actual file from storage (best-effort — path is derived from the public URL)
+      const marker = "/object/public/posts/";
+      const markerIndex = post.media_url.indexOf(marker);
+      if (markerIndex !== -1) {
+        const storagePath = post.media_url.slice(markerIndex + marker.length);
+        await supabase.storage.from("posts").remove([storagePath]);
+      }
+
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", post.id)
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+
+      setDeleted(true);
+      onDeleted?.(post.id);
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      alert("Couldn't delete this post. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const loadComments = async () => {
     const { data, error } = await supabase
       .from("comments")
@@ -167,10 +210,12 @@ export default function PostCard({
     }
   };
 
+  if (deleted) return null;
+
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl mb-6 border border-gray-200 dark:border-gray-800">
       {/* Post header */}
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-center gap-3 p-3 relative">
         <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
           {post.username[0].toUpperCase()}
         </div>
@@ -187,6 +232,29 @@ export default function PostCard({
           >
             {followingAuthor ? "Following" : "Follow"}
           </button>
+        )}
+        {isOwnPost && (
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              disabled={deleting}
+              className="text-gray-500 dark:text-gray-400 px-1 disabled:opacity-50"
+              title="Post options"
+            >
+              <FaEllipsisH size={16} />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-7 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm text-red-500 font-semibold whitespace-nowrap disabled:opacity-50"
+                >
+                  {deleting ? "Deleting..." : "Delete post"}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

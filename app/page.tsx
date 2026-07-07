@@ -86,6 +86,9 @@ export default function Home() {
               currentUsername={currentUsername}
               initiallyLiked={likedPostIds.has(post.id)}
               initiallyFollowingAuthor={followingIds.has(post.user_id)}
+              onDeleted={(postId) =>
+                setPosts((prev) => prev.filter((p) => p.id !== postId))
+              }
             />
           ))
         )}

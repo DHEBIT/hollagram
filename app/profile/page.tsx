@@ -2,7 +2,7 @@
 
 import Navbar from "../components/Navbar";
 import { useEffect, useState } from "react";
-import { FaBars, FaThLarge, FaUserTag } from "react-icons/fa";
+import { FaBars, FaThLarge, FaUserTag, FaTrash } from "react-icons/fa";
 import { MdVideoLibrary, MdOutlineAutorenew } from "react-icons/md";
 import { FaThreads } from "react-icons/fa6";
 import Image from "next/image";
@@ -41,6 +41,7 @@ export default function ProfilePage() {
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -92,6 +93,39 @@ export default function ProfilePage() {
     };
     load();
   }, []);
+
+  const handleDeletePost = async (postId: string, mediaUrl: string) => {
+    if (!currentUserId || deletingId) return;
+    const confirmed = window.confirm(
+      "Delete this post? This can't be undone — likes, comments, and notifications tied to it will be removed too."
+    );
+    if (!confirmed) return;
+
+    setDeletingId(postId);
+    try {
+      const marker = "/object/public/posts/";
+      const markerIndex = mediaUrl.indexOf(marker);
+      if (markerIndex !== -1) {
+        const storagePath = mediaUrl.slice(markerIndex + marker.length);
+        await supabase.storage.from("posts").remove([storagePath]);
+      }
+
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId)
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      alert("Couldn't delete this post. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleFollow = async (otherUserId: string) => {
     if (!currentUserId) return;
@@ -249,8 +283,16 @@ export default function ProfilePage() {
           ) : (
             <div className="grid grid-cols-3 gap-0.5">
               {posts.map((post) => (
-                <div key={post.id} className="aspect-square relative">
+                <div key={post.id} className="aspect-square relative group">
                   <Image src={post.media_url} alt="" fill className="object-cover" />
+                  <button
+                    onClick={() => handleDeletePost(post.id, post.media_url)}
+                    disabled={deletingId === post.id}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1.5 disabled:opacity-50"
+                    title="Delete post"
+                  >
+                    <FaTrash size={12} />
+                  </button>
                 </div>
               ))}
             </div>
