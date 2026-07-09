@@ -25,6 +25,8 @@ export default function Home() {
   const [currentUsername, setCurrentUsername] = useState("user");
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [avatarByUserId, setAvatarByUserId] = useState<Map<string, string | null>>(new Map());
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +45,25 @@ export default function Home() {
 
       if (!postsError && postsData) setPosts(postsData);
 
+      if (postsData && postsData.length > 0) {
+        const authorIds = [...new Set(postsData.map((p) => p.user_id))];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", authorIds);
+        setAvatarByUserId(
+          new Map((profilesData || []).map((p) => [p.id, p.avatar_url]))
+        );
+      }
+
       if (userId) {
+        const { data: ownProfile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", userId)
+          .single();
+        setCurrentUserAvatarUrl(ownProfile?.avatar_url || null);
+
         const { data: likesData } = await supabase
           .from("post_likes")
           .select("post_id")
@@ -84,6 +104,8 @@ export default function Home() {
               post={post}
               currentUserId={currentUserId}
               currentUsername={currentUsername}
+              currentUserAvatarUrl={currentUserAvatarUrl}
+              authorAvatarUrl={avatarByUserId.get(post.user_id) || null}
               initiallyLiked={likedPostIds.has(post.id)}
               initiallyFollowingAuthor={followingIds.has(post.user_id)}
               onDeleted={(postId) =>

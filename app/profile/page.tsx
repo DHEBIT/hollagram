@@ -1,12 +1,12 @@
 "use client";
 
-import Navbar from "../components/Navbar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaBars, FaThLarge, FaUserTag, FaTrash } from "react-icons/fa";
 import { MdVideoLibrary, MdOutlineAutorenew } from "react-icons/md";
 import { FaThreads } from "react-icons/fa6";
 import Image from "next/image";
 import BottomNav from "../components/BottomNav";
+import Avatar from "../components/Avatar";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Link from "next/link";
@@ -26,14 +26,18 @@ type Post = {
 type SuggestedUser = {
   id: string;
   username: string;
+  avatar_url: string | null;
 };
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("posts");
   const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState("user");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -60,7 +64,7 @@ export default function ProfilePage() {
       setCurrentUserId(user.id);
       setCurrentUsername(username);
 
-      const [postsRes, followersRes, followingRes, followingIdsRes, profilesRes] =
+      const [postsRes, followersRes, followingRes, followingIdsRes, profilesRes, ownProfileRes] =
         await Promise.all([
           supabase
             .from("posts")
@@ -76,12 +80,18 @@ export default function ProfilePage() {
             .select("id", { count: "exact", head: true })
             .eq("follower_id", user.id),
           supabase.from("follows").select("following_id").eq("follower_id", user.id),
-          supabase.from("profiles").select("id, username").neq("id", user.id).limit(10),
+          supabase
+            .from("profiles")
+            .select("id, username, avatar_url")
+            .neq("id", user.id)
+            .limit(10),
+          supabase.from("profiles").select("avatar_url").eq("id", user.id).single(),
         ]);
 
       setPosts(postsRes.data || []);
       setFollowersCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
+      setAvatarUrl(ownProfileRes.data?.avatar_url || null);
 
       const alreadyFollowing = new Set(
         (followingIdsRes.data || []).map((f) => f.following_id)
@@ -93,6 +103,43 @@ export default function ProfilePage() {
     };
     load();
   }, []);
+
+  const handleAvatarClick = () => avatarInputRef.current?.click();
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !currentUserId) return;
+
+    setUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      // Fixed filename per user (with upsert) so old avatars don't pile up in storage
+      const filePath = `${currentUserId}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      // Cache-bust so the new image shows immediately even though the path is the same
+      const bustedUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: bustedUrl })
+        .eq("id", currentUserId);
+      if (updateError) throw updateError;
+
+      setAvatarUrl(bustedUrl);
+    } catch (err) {
+      console.error("Failed to update avatar:", err);
+      alert("Couldn't update your profile picture. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleDeletePost = async (postId: string, mediaUrl: string) => {
     if (!currentUserId || deletingId) return;
@@ -166,17 +213,30 @@ export default function ProfilePage() {
 
       <div className="max-w-lg mx-auto px-4">
 
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleAvatarChange}
+          className="hidden"
+        />
+
         {/* Avatar + stats */}
         <div className="flex items-center gap-6 mt-4 mb-3">
           {/* Avatar with + */}
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-linear-to-tr from-primary via-accent1 to-accent2 p-0.5">
-              <div className="w-full h-full rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold text-primary overflow-hidden">
-                {currentUsername[0]?.toUpperCase() || "U"}
+              <div className="w-full h-full rounded-full overflow-hidden bg-gray-300 dark:bg-gray-700">
+                <Avatar url={avatarUrl} username={currentUsername} size={76} />
               </div>
             </div>
-            <button className="absolute bottom-0 right-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs border-2 border-white dark:border-black font-bold">
-              +
+            <button
+              onClick={handleAvatarClick}
+              disabled={uploadingAvatar}
+              className="absolute bottom-0 right-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs border-2 border-white dark:border-black font-bold disabled:opacity-50"
+              title="Change profile picture"
+            >
+              {uploadingAvatar ? "…" : "+"}
             </button>
           </div>
 
@@ -236,8 +296,8 @@ export default function ProfilePage() {
                     >
                       ✕
                     </button>
-                    <div className="w-12 h-12 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold mx-auto mb-2">
-                      {person.username[0].toUpperCase()}
+                    <div className="mx-auto mb-2 w-fit">
+                      <Avatar url={person.avatar_url} username={person.username} size={48} />
                     </div>
                     <p className="text-xs font-semibold dark:text-white text-center truncate">
                       {person.username}

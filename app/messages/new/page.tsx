@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FaArrowLeft, FaUserCircle } from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import Avatar from "../../components/Avatar";
 import { supabase } from "../../lib/supabase";
 
 type Profile = {
   id: string;
   username: string;
+  avatar_url: string | null;
 };
 
 export default function NewMessagePage() {
@@ -26,7 +28,7 @@ export default function NewMessagePage() {
 
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, username")
+        .select("id, username, avatar_url")
         .order("username", { ascending: true });
 
       setProfiles((profilesData || []).filter((p) => p.id !== userId));
@@ -113,9 +115,7 @@ export default function NewMessagePage() {
                 disabled={!!startingChatWith}
                 className="flex items-center gap-3 py-3 w-full text-left disabled:opacity-50"
               >
-                <div className="w-12 h-12 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                  {person.username[0]?.toUpperCase() || <FaUserCircle size={20} />}
-                </div>
+                <Avatar url={person.avatar_url} username={person.username} size={48} />
                 <p className="text-sm font-semibold dark:text-white">
                   {startingChatWith === person.id ? "Starting chat..." : person.username}
                 </p>

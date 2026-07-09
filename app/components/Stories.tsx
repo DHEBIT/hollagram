@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import Avatar from "./Avatar";
 import StoryViewer, { type StoryItem } from "./StoryViewer";
 
 type StoryGroup = {
   userId: string;
   username: string;
+  avatarUrl: string | null;
   stories: StoryItem[];
   allSeen: boolean;
 };
@@ -16,6 +18,7 @@ export default function Stories() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState("user");
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [viewerGroup, setViewerGroup] = useState<StoryGroup | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +44,23 @@ export default function Stories() {
         .select("story_id")
         .eq("viewer_id", userId);
       if (viewsData) viewedStoryIds = new Set(viewsData.map((v) => v.story_id));
+
+      const { data: ownProfile } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", userId)
+        .single();
+      setCurrentUserAvatarUrl(ownProfile?.avatar_url || null);
+    }
+
+    const authorIds = [...new Set((storiesData || []).map((s) => s.user_id))];
+    let avatarByUserId = new Map<string, string | null>();
+    if (authorIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, avatar_url")
+        .in("id", authorIds);
+      avatarByUserId = new Map((profilesData || []).map((p) => [p.id, p.avatar_url]));
     }
 
     const groupMap = new Map<string, StoryGroup>();
@@ -48,6 +68,7 @@ export default function Stories() {
       const item: StoryItem = {
         id: s.id,
         username: s.username,
+        avatar_url: avatarByUserId.get(s.user_id) || null,
         media_url: s.media_url,
         media_type: s.media_type,
         created_at: s.created_at,
@@ -59,6 +80,7 @@ export default function Stories() {
         groupMap.set(s.user_id, {
           userId: s.user_id,
           username: s.username,
+          avatarUrl: avatarByUserId.get(s.user_id) || null,
           stories: [item],
           allSeen: false,
         });
@@ -156,8 +178,8 @@ export default function Stories() {
                 : "bg-gray-300 dark:bg-gray-700"
             }`}
           >
-            <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xl font-bold text-primary relative">
-              {currentUsername[0]?.toUpperCase() || "Y"}
+            <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center relative">
+              <Avatar url={currentUserAvatarUrl} username={currentUsername} size={60} />
               <span
                 onClick={(e) => {
                   e.stopPropagation();
@@ -185,8 +207,8 @@ export default function Stories() {
                   : "bg-linear-to-bl from-[#7C3AED] via-[#F97316] to-[#06B6D4]"
               }`}
             >
-              <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xl font-bold text-primary">
-                {group.username[0].toUpperCase()}
+              <div className="w-full h-full rounded-full overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                <Avatar url={group.avatarUrl} username={group.username} size={60} />
               </div>
             </button>
             <span className="text-xs text-gray-600 dark:text-gray-400 w-16 text-center truncate">

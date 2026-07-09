@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FaArrowLeft, FaPaperPlane } from "react-icons/fa";
+import Avatar from "../../components/Avatar";
 import { supabase } from "../../lib/supabase";
 
 type Message = {
@@ -20,6 +21,7 @@ export default function ConversationPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUsername, setOtherUsername] = useState("user");
+  const [otherAvatarUrl, setOtherAvatarUrl] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -47,10 +49,13 @@ export default function ConversationPage() {
         const otherUserId = convo.user_a === userId ? convo.user_b : convo.user_a;
         const { data: profile } = await supabase
           .from("profiles")
-          .select("username")
+          .select("username, avatar_url")
           .eq("id", otherUserId)
           .single();
-        if (profile) setOtherUsername(profile.username);
+        if (profile) {
+          setOtherUsername(profile.username);
+          setOtherAvatarUrl(profile.avatar_url);
+        }
       }
 
       const { data: messagesData } = await supabase
@@ -126,9 +131,7 @@ export default function ConversationPage() {
         <button onClick={() => router.back()} className="dark:text-white">
           <FaArrowLeft size={20} />
         </button>
-        <div className="w-9 h-9 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm">
-          {otherUsername[0]?.toUpperCase() || "U"}
-        </div>
+        <Avatar url={otherAvatarUrl} username={otherUsername} size={36} />
         <span className="font-semibold text-sm dark:text-white">{otherUsername}</span>
       </div>
 

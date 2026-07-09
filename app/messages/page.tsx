@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FaSearch, FaEdit, FaUserCircle } from "react-icons/fa";
+import { FaSearch, FaEdit } from "react-icons/fa";
 import Link from "next/link";
 import BottomNav from "../components/BottomNav";
+import Avatar from "../components/Avatar";
 import { supabase } from "../lib/supabase";
 
 type ConversationRow = {
   id: string;
   otherUsername: string;
+  otherAvatarUrl: string | null;
   lastMessage: string | null;
   lastMessageAt: string | null;
 };
@@ -58,16 +60,20 @@ export default function MessagesPage() {
 
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, username")
+        .select("id, username, avatar_url")
         .in("id", otherIds);
 
-      const usernameById = new Map((profilesData || []).map((p) => [p.id, p.username]));
+      const profileById = new Map(
+        (profilesData || []).map((p) => [p.id, { username: p.username, avatarUrl: p.avatar_url }])
+      );
 
       const rows: ConversationRow[] = convosData.map((c) => {
         const otherUserId = c.user_a === user.id ? c.user_b : c.user_a;
+        const profile = profileById.get(otherUserId);
         return {
           id: c.id,
-          otherUsername: usernameById.get(otherUserId) || "user",
+          otherUsername: profile?.username || "user",
+          otherAvatarUrl: profile?.avatarUrl || null,
           lastMessage: c.last_message,
           lastMessageAt: c.last_message_at,
         };
@@ -134,9 +140,7 @@ export default function MessagesPage() {
                 href={`/messages/${convo.id}`}
                 className="flex items-center gap-3 py-3"
               >
-                <div className="w-12 h-12 rounded-full bg-linear-to-tr from-primary to-accent2 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                  {convo.otherUsername[0]?.toUpperCase() || <FaUserCircle size={20} />}
-                </div>
+                <Avatar url={convo.otherAvatarUrl} username={convo.otherUsername} size={48} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium dark:text-white">{convo.otherUsername}</p>
                   <p className="text-xs text-gray-400 truncate">

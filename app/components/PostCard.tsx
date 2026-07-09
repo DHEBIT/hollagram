@@ -3,6 +3,7 @@
 import { FaHeart, FaRegHeart, FaRegComment, FaPaperPlane, FaEllipsisH } from "react-icons/fa";
 import { useState } from "react";
 import Image from "next/image";
+import Avatar from "./Avatar";
 import { supabase } from "../lib/supabase";
 
 type Post = {
@@ -18,15 +19,19 @@ type Post = {
 
 type Comment = {
   id: string;
+  user_id: string;
   username: string;
   content: string;
   created_at: string;
+  avatar_url?: string | null;
 };
 
 type PostCardProps = {
   post: Post;
   currentUserId: string | null;
   currentUsername: string;
+  currentUserAvatarUrl: string | null;
+  authorAvatarUrl: string | null;
   initiallyLiked: boolean;
   initiallyFollowingAuthor: boolean;
   onDeleted?: (postId: string) => void;
@@ -36,6 +41,8 @@ export default function PostCard({
   post,
   currentUserId,
   currentUsername,
+  currentUserAvatarUrl,
+  authorAvatarUrl,
   initiallyLiked,
   initiallyFollowingAuthor,
   onDeleted,
@@ -161,12 +168,23 @@ export default function PostCard({
   const loadComments = async () => {
     const { data, error } = await supabase
       .from("comments")
-      .select("id, username, content, created_at")
+      .select("id, user_id, username, content, created_at")
       .eq("post_id", post.id)
       .order("created_at", { ascending: true });
 
     if (!error && data) {
-      setComments(data);
+      const userIds = [...new Set(data.map((c) => c.user_id))];
+      let avatarByUserId = new Map<string, string | null>();
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", userIds);
+        avatarByUserId = new Map((profilesData || []).map((p) => [p.id, p.avatar_url]));
+      }
+      setComments(
+        data.map((c) => ({ ...c, avatar_url: avatarByUserId.get(c.user_id) || null }))
+      );
     }
     setCommentsLoaded(true);
   };
@@ -193,13 +211,13 @@ export default function PostCard({
           username: currentUsername,
           content,
         })
-        .select("id, username, content, created_at")
+        .select("id, user_id, username, content, created_at")
         .single();
 
       if (error) throw error;
 
       if (data) {
-        setComments((prev) => [...prev, data]);
+        setComments((prev) => [...prev, { ...data, avatar_url: currentUserAvatarUrl }]);
         setCommentsCount((prev) => prev + 1);
         setNewComment("");
       }
@@ -216,9 +234,7 @@ export default function PostCard({
     <div className="bg-white dark:bg-gray-900 rounded-xl mb-6 border border-gray-200 dark:border-gray-800">
       {/* Post header */}
       <div className="flex items-center gap-3 p-3 relative">
-        <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-          {post.username[0].toUpperCase()}
-        </div>
+        <Avatar url={authorAvatarUrl} username={post.username} size={36} />
         <span className="font-semibold text-sm dark:text-white flex-1">{post.username}</span>
         {!isOwnPost && currentUserId && (
           <button
@@ -324,10 +340,13 @@ export default function PostCard({
           ) : (
             <div className="flex flex-col gap-2 mb-3 max-h-64 overflow-y-auto">
               {comments.map((c) => (
-                <p key={c.id} className="text-sm dark:text-gray-300">
-                  <span className="font-semibold dark:text-white">{c.username}</span>{" "}
-                  {c.content}
-                </p>
+                <div key={c.id} className="flex items-start gap-2">
+                  <Avatar url={c.avatar_url} username={c.username} size={24} />
+                  <p className="text-sm dark:text-gray-300">
+                    <span className="font-semibold dark:text-white">{c.username}</span>{" "}
+                    {c.content}
+                  </p>
+                </div>
               ))}
             </div>
           )}

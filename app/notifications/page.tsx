@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { FaArrowLeft, FaHeart, FaRegComment, FaUserPlus } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
+import Avatar from "../components/Avatar";
 import { supabase } from "../lib/supabase";
 
 type Notification = {
   id: string;
+  actor_id: string;
   actor_username: string;
+  avatar_url?: string | null;
   type: "like" | "comment" | "follow";
   post_id: string | null;
   read: boolean;
@@ -66,16 +69,32 @@ export default function NotificationsPage() {
 
       const { data } = await supabase
         .from("notifications")
-        .select("id, actor_username, type, post_id, read, created_at")
+        .select("id, actor_id, actor_username, type, post_id, read, created_at")
         .eq("recipient_id", userId)
         .order("created_at", { ascending: false })
         .limit(100);
 
-      setNotifications(data || []);
+      let withAvatars = data || [];
+      if (withAvatars.length > 0) {
+        const actorIds = [...new Set(withAvatars.map((n) => n.actor_id))];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", actorIds);
+        const avatarByUserId = new Map(
+          (profilesData || []).map((p) => [p.id, p.avatar_url])
+        );
+        withAvatars = withAvatars.map((n) => ({
+          ...n,
+          avatar_url: avatarByUserId.get(n.actor_id) || null,
+        }));
+      }
+
+      setNotifications(withAvatars);
       setLoading(false);
 
       // Mark everything as read now that the user is viewing the page
-      const unreadIds = (data || []).filter((n) => !n.read).map((n) => n.id);
+      const unreadIds = withAvatars.filter((n) => !n.read).map((n) => n.id);
       if (unreadIds.length > 0) {
         await supabase.from("notifications").update({ read: true }).in("id", unreadIds);
       }
@@ -123,10 +142,8 @@ export default function NotificationsPage() {
                   } ${!item.read ? "bg-primary/5" : ""}`}
                 >
                   {/* Avatar */}
-                  <div className="relative w-11 h-11 rounded-full bg-linear-to-tr from-primary via-accent1 to-accent2 p-[2px] shrink-0">
-                    <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-sm font-bold text-primary">
-                      {item.actor_username[0].toUpperCase()}
-                    </div>
+                  <div className="relative shrink-0">
+                    <Avatar url={item.avatar_url} username={item.actor_username} size={44} />
                     <div className="absolute -bottom-1 -right-1 bg-white dark:bg-black rounded-full p-0.5">
                       {item.type === "like" && <FaHeart className="text-red-500" size={12} />}
                       {item.type === "comment" && (

@@ -5,11 +5,13 @@ import { FaSearch } from "react-icons/fa";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import BottomNav from "../components/BottomNav";
+import Avatar from "../components/Avatar";
 import { supabase } from "../lib/supabase";
 
 type UserResult = {
   id: string;
   username: string;
+  avatar_url: string | null;
 };
 
 type PostResult = {
@@ -77,7 +79,7 @@ export default function SearchPage() {
       const [usersRes, postsRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id, username")
+          .select("id, username, avatar_url")
           .ilike("username", `%${trimmed}%`)
           .neq("id", currentUserId ?? "")
           .limit(10),
@@ -150,9 +152,7 @@ export default function SearchPage() {
                     <div className="flex flex-col gap-1">
                       {userResults.map((user) => (
                         <div key={user.id} className="flex items-center gap-3 py-2">
-                          <div className="w-11 h-11 rounded-full bg-linear-to-tr from-primary to-accent1 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                            {user.username[0].toUpperCase()}
-                          </div>
+                          <Avatar url={user.avatar_url} username={user.username} size={44} />
                           <p className="flex-1 text-sm font-semibold dark:text-white">
                             {user.username}
                           </p>

@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FaTimes, FaVolumeMute, FaVolumeUp } from "react-icons/fa";
+import Avatar from "./Avatar";
 import { supabase } from "../lib/supabase";
 
 export type StoryItem = {
   id: string;
   username: string;
+  avatar_url?: string | null;
   media_url: string;
   media_type: string;
   created_at: string;
@@ -154,9 +156,7 @@ export default function StoryViewer({
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 z-20">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">
-              {current.username[0].toUpperCase()}
-            </div>
+            <Avatar url={current.avatar_url} username={current.username} size={32} />
             <span className="text-white text-sm font-semibold">{current.username}</span>
           </div>
           <div className="flex items-center gap-4">
