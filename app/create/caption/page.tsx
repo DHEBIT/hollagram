@@ -9,11 +9,12 @@ import { useCreatePost } from "../CreatePostContext";
 
 export default function CaptionPage() {
   const router = useRouter();
-  const { file, previewUrl, mediaType, reset } = useCreatePost();
+  const { file, previewUrl, mediaType, aspectRatio, reset } = useCreatePost();
   const [caption, setCaption] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
   const [initial, setInitial] = useState("H");
+  const [destination, setDestination] = useState<"post" | "reel">("post");
 
   useEffect(() => {
     // No file? Nothing to caption — send them back to pick one.
@@ -39,13 +40,15 @@ export default function CaptionPage() {
       }
       const user = userData.user;
       const username = user.user_metadata?.username || user.email?.split("@")[0] || "user";
+      const shareAsReel = destination === "reel" && mediaType === "video";
 
       // 1. Upload the file to Supabase Storage
       const fileExt = file.name.split(".").pop();
       const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      const bucket = shareAsReel ? "reels" : "posts";
 
       const { error: uploadError } = await supabase.storage
-        .from("posts")
+        .from(bucket)
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
@@ -57,27 +60,37 @@ export default function CaptionPage() {
 
       // 2. Get a public URL for the uploaded file
       const { data: publicUrlData } = supabase.storage
-        .from("posts")
+        .from(bucket)
         .getPublicUrl(filePath);
 
-      // 3. Insert the post row
-      const { error: insertError } = await supabase.from("posts").insert({
-        user_id: user.id,
-        username,
-        caption,
-        media_url: publicUrlData.publicUrl,
-        media_type: mediaType,
-        likes: 0,
-        comments: 0,
-      });
+      // 3. Insert the row into the right table
+      const { error: insertError } = shareAsReel
+        ? await supabase.from("reels").insert({
+            user_id: user.id,
+            username,
+            caption,
+            video_url: publicUrlData.publicUrl,
+            likes: 0,
+            views: 0,
+          })
+        : await supabase.from("posts").insert({
+            user_id: user.id,
+            username,
+            caption,
+            media_url: publicUrlData.publicUrl,
+            media_type: mediaType,
+            aspect_ratio: aspectRatio || 1,
+            likes: 0,
+            comments: 0,
+          });
 
       if (insertError) {
-        throw new Error(`Couldn't save post: ${insertError.message}`);
+        throw new Error(`Couldn't save ${shareAsReel ? "reel" : "post"}: ${insertError.message}`);
       }
 
-      // Success — clean up and go back to the feed
+      // Success — clean up and go to the right feed
       reset();
-      router.push("/");
+      router.push(shareAsReel ? "/reels" : "/");
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -92,7 +105,9 @@ export default function CaptionPage() {
         <Link href="/create" className="text-white">
           <FaTimes size={22} />
         </Link>
-        <h2 className="text-base font-semibold">New Post</h2>
+        <h2 className="text-base font-semibold">
+          {destination === "reel" && mediaType === "video" ? "New Reel" : "New Post"}
+        </h2>
         <button
           onClick={handleShare}
           disabled={posting || !file}
@@ -105,6 +120,24 @@ export default function CaptionPage() {
       {error && (
         <div className="mx-4 mt-3 rounded-lg bg-red-500/10 border border-red-500/40 px-3 py-2 text-xs text-red-400">
           {error}
+        </div>
+      )}
+
+      {mediaType === "video" && (
+        <div className="flex gap-2 px-4 py-3 border-b border-gray-800">
+          {(["post", "reel"] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setDestination(option)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold ${
+                destination === option
+                  ? "bg-primary text-white"
+                  : "bg-gray-800 text-gray-300"
+              }`}
+            >
+              {option === "post" ? "Share as Post" : "Share as Reel"}
+            </button>
+          ))}
         </div>
       )}
 

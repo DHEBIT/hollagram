@@ -8,6 +8,7 @@ type CreatePostContextValue = {
   file: File | null;
   previewUrl: string | null;
   mediaType: MediaType;
+  aspectRatio: number;
   setFile: (file: File | null) => void;
   reset: () => void;
 };
@@ -18,6 +19,7 @@ export function CreatePostProvider({ children }: { children: React.ReactNode }) 
   const [file, setFileState] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<MediaType>("image");
+  const [aspectRatio, setAspectRatio] = useState<number>(1);
   const previousUrlRef = useRef<string | null>(null);
 
   const setFile = (newFile: File | null) => {
@@ -31,7 +33,27 @@ export function CreatePostProvider({ children }: { children: React.ReactNode }) 
       const url = URL.createObjectURL(newFile);
       previousUrlRef.current = url;
       setPreviewUrl(url);
-      setMediaType(newFile.type.startsWith("video") ? "video" : "image");
+      setAspectRatio(1); // reset until the real dimensions load in
+
+      if (newFile.type.startsWith("video")) {
+        setMediaType("video");
+        const videoEl = document.createElement("video");
+        videoEl.onloadedmetadata = () => {
+          if (videoEl.videoWidth && videoEl.videoHeight) {
+            setAspectRatio(videoEl.videoWidth / videoEl.videoHeight);
+          }
+        };
+        videoEl.src = url;
+      } else {
+        setMediaType("image");
+        const img = new window.Image();
+        img.onload = () => {
+          if (img.naturalWidth && img.naturalHeight) {
+            setAspectRatio(img.naturalWidth / img.naturalHeight);
+          }
+        };
+        img.src = url;
+      }
     } else {
       setPreviewUrl(null);
     }
@@ -41,7 +63,9 @@ export function CreatePostProvider({ children }: { children: React.ReactNode }) 
   const reset = () => setFile(null);
 
   return (
-    <CreatePostContext.Provider value={{ file, previewUrl, mediaType, setFile, reset }}>
+    <CreatePostContext.Provider
+      value={{ file, previewUrl, mediaType, aspectRatio, setFile, reset }}
+    >
       {children}
     </CreatePostContext.Provider>
   );

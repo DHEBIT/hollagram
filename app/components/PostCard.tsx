@@ -13,6 +13,7 @@ type Post = {
   caption: string;
   media_url: string;
   media_type: string;
+  aspect_ratio?: number | null;
   likes: number;
   comments: number;
 };
@@ -36,6 +37,11 @@ type PostCardProps = {
   initiallyFollowingAuthor: boolean;
   onDeleted?: (postId: string) => void;
 };
+
+function clampAspectRatio(ratio: number | null | undefined): number {
+  if (!ratio || Number.isNaN(ratio)) return 1;
+  return Math.min(1.91, Math.max(0.56, ratio));
+}
 
 export default function PostCard({
   post,
@@ -300,12 +306,15 @@ export default function PostCard({
       </div>
 
       {/* Post media */}
-      <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800">
+      <div
+        className="relative w-full bg-black flex items-center justify-center"
+        style={{ aspectRatio: clampAspectRatio(post.aspect_ratio) }}
+      >
         {post.media_type === "video" ? (
           <video
             ref={videoRef}
             src={post.media_url}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             controls
             playsInline
             onPlay={() => videoRef.current && pauseOtherVideos(videoRef.current)}
@@ -317,7 +326,7 @@ export default function PostCard({
             fill
             loading="eager"
             sizes="(max-width: 768px) 100vw, 600px"
-            className="object-cover"
+            className="object-contain"
           />
         )}
       </div>

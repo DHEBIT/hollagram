@@ -14,6 +14,7 @@ type Post = {
   caption: string;
   media_url: string;
   media_type: string;
+  aspect_ratio?: number | null;
   likes: number;
   comments: number;
 };
