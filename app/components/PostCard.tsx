@@ -1,11 +1,11 @@
 "use client";
 
 import { FaHeart, FaRegHeart, FaRegComment, FaPaperPlane, FaEllipsisH } from "react-icons/fa";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Avatar from "./Avatar";
 import { supabase } from "../lib/supabase";
-
+import { registerVideo, unregisterVideo, pauseOtherVideos } from "../lib/videoManager";
 type Post = {
   id: string;
   user_id: string;
@@ -65,6 +65,31 @@ export default function PostCard({
   const [commentsCount, setCommentsCount] = useState(post.comments);
   const [newComment, setNewComment] = useState("");
   const [postingComment, setPostingComment] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    registerVideo(videoEl);
+
+    // Pause automatically once the video scrolls mostly out of view
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting && !videoEl.paused) {
+          videoEl.pause();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(videoEl);
+
+    return () => {
+      unregisterVideo(videoEl);
+      observer.disconnect();
+    };
+  }, []);
 
   const handleLike = async () => {
     if (!currentUserId || likeBusy) return;
@@ -278,10 +303,12 @@ export default function PostCard({
       <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-800">
         {post.media_type === "video" ? (
           <video
+            ref={videoRef}
             src={post.media_url}
             className="w-full h-full object-cover"
             controls
             playsInline
+            onPlay={() => videoRef.current && pauseOtherVideos(videoRef.current)}
           />
         ) : (
           <Image
