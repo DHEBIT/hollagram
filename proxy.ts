@@ -26,8 +26,9 @@ export async function proxy(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup");
+  const isResetPasswordPage = request.nextUrl.pathname.startsWith("/reset-password");
 
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isResetPasswordPage) {
     const redirectUrl = new URL("/login", request.url);
     return NextResponse.redirect(redirectUrl);
   }

@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import PasswordInput from "../components/PasswordInput";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -68,13 +69,7 @@ export default function SignupPage() {
           onChange={(e) => setEmail(e.target.value)}
           className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-900 dark:text-white outline-none text-sm border border-gray-200 dark:border-gray-800"
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-900 dark:text-white outline-none text-sm border border-gray-200 dark:border-gray-800"
-        />
+        <PasswordInput value={password} onChange={setPassword} />
 
         {error && <p className="text-red-500 text-xs text-center">{error}</p>}
 
